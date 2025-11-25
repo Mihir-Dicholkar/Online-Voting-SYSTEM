@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-
 // Import the charts and chart components
 import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
@@ -19,6 +19,7 @@ ChartJS.register(
 
 const Results = () => {
   const [selectedSector, setSelectedSector] = useState(null);
+  const [activeTab, setActiveTab] = useState('lokSabha');
 
   // More detailed dummy data for Maharashtra sectors
   const maharashtraSectors = [
@@ -256,158 +257,381 @@ const Results = () => {
     };
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { scale: 0.9, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    },
+    hover: {
+      scale: 1.03,
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      transition: {
+        duration: 0.2,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
   return (
     <>
       <Header />
       <div className="container mx-auto p-4 py-8 min-h-[calc(100vh-16rem)]">
-        <h1 className="text-4xl font-extrabold text-center text-gray-800 mb-10">
+        <motion.h1 
+          className="text-4xl font-extrabold text-center text-gray-800 mb-10"
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
           Maharashtra Election Results
-        </h1>
+        </motion.h1>
 
-        {selectedSector ? (
-          // Detailed view for a selected sector
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-5xl mx-auto animate-fade-in">
-            <button
-              onClick={handleBackClick}
-              className="mb-6 bg-blue-500 text-white px-5 py-2 rounded-md hover:bg-blue-600 transition duration-300 ease-in-out flex items-center"
+        <AnimatePresence mode="wait">
+          {selectedSector ? (
+            // Detailed view for a selected sector
+            <motion.div
+              key="detail-view"
+              className="bg-white p-8 rounded-lg shadow-xl max-w-5xl mx-auto"
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              transition={{ duration: 0.3 }}
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-              Back to Sectors
-            </button>
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedSector.name} Sector Results</h2>
-            <p className="text-gray-600 mb-6">{selectedSector.description}</p>
-            
-            {/* Lok Sabha Results */}
-            <div className="bg-gray-50 p-6 rounded-lg shadow-inner mb-8">
-              <h3 className="text-2xl font-semibold text-blue-700 mb-4">Lok Sabha Results</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div className="h-64">
-                  <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Vote Distribution by Party' } } }} data={getLokSabhaChartData(selectedSector)} />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold mb-3">Vote Breakdown</h4>
-                  <ul className="space-y-2">
-                    {Object.entries(selectedSector.lokSabha.results).map(([party, data]) => (
-                      <li key={party} className={`flex justify-between items-center p-3 rounded-md shadow-sm ${data.winner ? 'bg-green-100' : 'bg-white'}`}>
-                        <span className="font-medium text-gray-700">{party}</span>
-                        <div className="flex items-center">
-                          <span className="font-bold text-lg mr-2">{data.votes.toLocaleString()} Votes</span>
-                          {data.winner && (
-                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">Winner</span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <motion.button
+                onClick={handleBackClick}
+                className="mb-6 bg-blue-500 text-white px-5 py-2 rounded-md hover:bg-blue-600 transition duration-300 ease-in-out flex items-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Sectors
+              </motion.button>
+              
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedSector.name} Sector Results</h2>
+                <p className="text-gray-600">{selectedSector.description}</p>
               </div>
-            </div>
-
-            {/* Voter Turnout and Rajya Sabha Results */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-gray-50 p-6 rounded-lg shadow-inner">
-                <h3 className="text-2xl font-semibold text-green-700 mb-4">Voter Turnout</h3>
-                <div className="h-64 flex justify-center items-center">
-                  <div className="w-56 h-56">
-                    <Pie data={getVoterTurnoutChartData(selectedSector)} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }} />
-                  </div>
-                </div>
-                <p className="text-center text-gray-700 mt-4">
-                    Total Voter Turnout: <span className="font-bold text-2xl text-green-600">{selectedSector.lokSabha.voterTurnout}%</span>
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-6 rounded-lg shadow-inner">
-                <h3 className="text-2xl font-semibold text-purple-700 mb-4">Rajya Sabha Seats</h3>
-                <div className="h-64">
-                  <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Rajya Sabha Seats by Party' } } }} data={getRajyaSabhaChartData(selectedSector)} />
-                </div>
-                <div className="mt-4">
-                  <ul className="space-y-2">
-                    {Object.entries(selectedSector.rajyaSabha.results).map(([party, data]) => (
-                      <li key={party} className="flex justify-between items-center p-3 rounded-md shadow-sm bg-purple-100">
-                        <span className="font-medium text-gray-700">{party}</span>
-                        <span className="font-bold text-xl text-purple-800">{data.seats} Seat(s)</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Overall Summary Dashboard */}
-            <div className="bg-gray-100 p-6 rounded-lg shadow-inner mb-10">
-              <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Overall Maharashtra Summary</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
-                
-                {/* Total Lok Sabha Seats Card */}
-                <div className="bg-white p-6 rounded-lg shadow-md border-b-4 border-blue-500">
-                  <h3 className="text-lg font-semibold text-gray-600">Lok Sabha Seats</h3>
-                  <div className="mt-4">
-                    {Object.entries(overallSummary.lokSabhaSeats).map(([party, seats]) => (
-                      <p key={party} className="text-2xl font-bold text-gray-800">
-                        {party}: <span className="text-blue-600">{seats}</span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Total Rajya Sabha Seats Card */}
-                <div className="bg-white p-6 rounded-lg shadow-md border-b-4 border-purple-500">
-                  <h3 className="text-lg font-semibold text-gray-600">Rajya Sabha Seats</h3>
-                  <div className="mt-4">
-                    {Object.entries(overallSummary.rajyaSabhaSeats).map(([party, seats]) => (
-                      <p key={party} className="text-2xl font-bold text-gray-800">
-                        {party}: <span className="text-purple-600">{seats}</span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Average Voter Turnout Card */}
-                <div className="bg-white p-6 rounded-lg shadow-md border-b-4 border-green-500">
-                  <h3 className="text-lg font-semibold text-gray-600">Average Voter Turnout</h3>
-                  <p className="text-5xl font-bold text-green-600 mt-4">{overallSummary.averageTurnout}%</p>
-                </div>
-
-                {/* Overall Winner Card */}
-                <div className="bg-white p-6 rounded-lg shadow-md border-b-4 border-yellow-500">
-                  <h3 className="text-lg font-semibold text-gray-600">Lok Sabha Winner</h3>
-                  <p className="text-3xl font-bold text-yellow-600 mt-4">{overallSummary.lokSabhaWinningParty}</p>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Existing Grid view of all sectors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {maharashtraSectors.map((sector) => (
-                <div
-                  key={sector.id}
-                  onClick={() => handleSectorClick(sector)}
-                  className="bg-white p-6 rounded-lg shadow-md cursor-pointer hover:shadow-xl transform hover:scale-105 transition duration-300 ease-in-out border border-gray-200"
+              
+              {/* Tab Navigation */}
+              <div className="flex mb-6 border-b">
+                <button
+                  className={`px-4 py-2 font-semibold ${activeTab === 'lokSabha' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab('lokSabha')}
                 >
-                  <h2 className="text-2xl font-bold text-blue-700 mb-3">{sector.name}</h2>
-                  <p className="text-gray-600 text-sm mb-4">{sector.description}</p>
-                  <div className="flex justify-between items-center text-gray-700">
-                    <span className="font-semibold">Lok Sabha:</span>
-                    <span className="text-lg font-bold text-blue-600">
-                      {Object.values(sector.lokSabha.results).reduce((sum, result) => sum + (result.winner ? 1 : 0), 0)} Winner
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-gray-700 mt-2">
-                    <span className="font-semibold">Rajya Sabha:</span>
-                    <span className="text-lg font-bold text-purple-600">
-                      {Object.values(sector.rajyaSabha.results).reduce((sum, result) => sum + result.seats, 0)} Seats
-                    </span>
-                  </div>
+                  Lok Sabha
+                </button>
+                <button
+                  className={`px-4 py-2 font-semibold ${activeTab === 'rajyaSabha' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab('rajyaSabha')}
+                >
+                  Rajya Sabha
+                </button>
+                <button
+                  className={`px-4 py-2 font-semibold ${activeTab === 'voterTurnout' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+                  onClick={() => setActiveTab('voterTurnout')}
+                >
+                  Voter Turnout
+                </button>
+              </div>
+              
+              {/* Tab Content */}
+              <AnimatePresence mode="wait">
+                {activeTab === 'lokSabha' && (
+                  <motion.div
+                    key="lok-sabha"
+                    className="bg-gray-50 p-6 rounded-lg shadow-inner"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h3 className="text-2xl font-semibold text-blue-700 mb-4">Lok Sabha Results</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                      <motion.div 
+                        className="h-64"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                      >
+                        <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Vote Distribution by Party' } } }} data={getLokSabhaChartData(selectedSector)} />
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                      >
+                        <h4 className="text-xl font-bold mb-3">Vote Breakdown</h4>
+                        <ul className="space-y-2">
+                          {Object.entries(selectedSector.lokSabha.results).map(([party, data], index) => (
+                            <motion.li 
+                              key={party} 
+                              className={`flex justify-between items-center p-3 rounded-md shadow-sm ${data.winner ? 'bg-green-100' : 'bg-white'}`}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.3, delay: 0.1 * index }}
+                            >
+                              <span className="font-medium text-gray-700">{party}</span>
+                              <div className="flex items-center">
+                                <span className="font-bold text-lg mr-2">{data.votes.toLocaleString()} Votes</span>
+                                {data.winner && (
+                                  <motion.span 
+                                    className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full"
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ duration: 0.3, delay: 0.5 + 0.1 * index }}
+                                  >
+                                    Winner
+                                  </motion.span>
+                                )}
+                              </div>
+                            </motion.li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {activeTab === 'rajyaSabha' && (
+                  <motion.div
+                    key="rajya-sabha"
+                    className="bg-gray-50 p-6 rounded-lg shadow-inner"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h3 className="text-2xl font-semibold text-purple-700 mb-4">Rajya Sabha Seats</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                      <motion.div 
+                        className="h-64"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                      >
+                        <Bar options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Rajya Sabha Seats by Party' } } }} data={getRajyaSabhaChartData(selectedSector)} />
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                      >
+                        <ul className="space-y-2">
+                          {Object.entries(selectedSector.rajyaSabha.results).map(([party, data], index) => (
+                            <motion.li 
+                              key={party} 
+                              className="flex justify-between items-center p-3 rounded-md shadow-sm bg-purple-100"
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.3, delay: 0.1 * index }}
+                            >
+                              <span className="font-medium text-gray-700">{party}</span>
+                              <span className="font-bold text-xl text-purple-800">{data.seats} Seat(s)</span>
+                            </motion.li>
+                          ))}
+                        </ul>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {activeTab === 'voterTurnout' && (
+                  <motion.div
+                    key="voter-turnout"
+                    className="bg-gray-50 p-6 rounded-lg shadow-inner"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h3 className="text-2xl font-semibold text-green-700 mb-4">Voter Turnout</h3>
+                    <div className="flex flex-col items-center">
+                      <motion.div 
+                        className="h-64 w-64"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                      >
+                        <Pie data={getVoterTurnoutChartData(selectedSector)} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }} />
+                      </motion.div>
+                      <motion.p 
+                        className="text-center text-gray-700 mt-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                      >
+                        Total Voter Turnout: 
+                        <motion.span 
+                          className="font-bold text-2xl text-green-600 ml-2"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.5, delay: 0.5 }}
+                        >
+                          {selectedSector.lokSabha.voterTurnout}%
+                        </motion.span>
+                      </motion.p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="grid-view"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Overall Summary Dashboard */}
+              <motion.div 
+                className="bg-gray-100 p-6 rounded-lg shadow-inner mb-10"
+                variants={itemVariants}
+              >
+                <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Overall Maharashtra Summary</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                  
+                  {/* Total Lok Sabha Seats Card */}
+                  <motion.div 
+                    className="bg-white p-6 rounded-lg shadow-md border-b-4 border-blue-500"
+                    variants={cardVariants}
+                    whileHover="hover"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-600">Lok Sabha Seats</h3>
+                    <div className="mt-4">
+                      {Object.entries(overallSummary.lokSabhaSeats).map(([party, seats], index) => (
+                        <motion.p 
+                          key={party} 
+                          className="text-2xl font-bold text-gray-800"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 * index }}
+                        >
+                          {party}: <span className="text-blue-600">{seats}</span>
+                        </motion.p>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  {/* Total Rajya Sabha Seats Card */}
+                  <motion.div 
+                    className="bg-white p-6 rounded-lg shadow-md border-b-4 border-purple-500"
+                    variants={cardVariants}
+                    whileHover="hover"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-600">Rajya Sabha Seats</h3>
+                    <div className="mt-4">
+                      {Object.entries(overallSummary.rajyaSabhaSeats).map(([party, seats], index) => (
+                        <motion.p 
+                          key={party} 
+                          className="text-2xl font-bold text-gray-800"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 * index }}
+                        >
+                          {party}: <span className="text-purple-600">{seats}</span>
+                        </motion.p>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  {/* Average Voter Turnout Card */}
+                  <motion.div 
+                    className="bg-white p-6 rounded-lg shadow-md border-b-4 border-green-500"
+                    variants={cardVariants}
+                    whileHover="hover"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-600">Average Voter Turnout</h3>
+                    <motion.p 
+                      className="text-5xl font-bold text-green-600 mt-4"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                      {overallSummary.averageTurnout}%
+                    </motion.p>
+                  </motion.div>
+
+                  {/* Overall Winner Card */}
+                  <motion.div 
+                    className="bg-white p-6 rounded-lg shadow-md border-b-4 border-yellow-500"
+                    variants={cardVariants}
+                    whileHover="hover"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-600">Lok Sabha Winner</h3>
+                    <motion.p 
+                      className="text-3xl font-bold text-yellow-600 mt-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                      {overallSummary.lokSabhaWinningParty}
+                    </motion.p>
+                  </motion.div>
+
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              </motion.div>
+
+              {/* Grid view of all sectors */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {maharashtraSectors.map((sector, index) => (
+                  <motion.div
+                    key={sector.id}
+                    variants={itemVariants}
+                    whileHover={{ 
+                      scale: 1.05, 
+                      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" 
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleSectorClick(sector)}
+                    className="bg-white p-6 rounded-lg shadow-md cursor-pointer transition duration-300 ease-in-out border border-gray-200"
+                  >
+                    <h2 className="text-2xl font-bold text-blue-700 mb-3">{sector.name}</h2>
+                    <p className="text-gray-600 text-sm mb-4">{sector.description}</p>
+                    <div className="flex justify-between items-center text-gray-700">
+                      <span className="font-semibold">Lok Sabha:</span>
+                      <span className="text-lg font-bold text-blue-600">
+                        {Object.values(sector.lokSabha.results).reduce((sum, result) => sum + (result.winner ? 1 : 0), 0)} Winner
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-700 mt-2">
+                      <span className="font-semibold">Rajya Sabha:</span>
+                      <span className="text-lg font-bold text-purple-600">
+                        {Object.values(sector.rajyaSabha.results).reduce((sum, result) => sum + result.seats, 0)} Seats
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <Footer />
     </>

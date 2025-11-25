@@ -1,38 +1,36 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { motion, useInView, useScroll, useTransform, useSpring } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus, faVoteYea, faChartBar, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import Footer from '../components/Footer';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 const Home = () => {
   // Refs for each section to apply fade-in effect
   const heroRef = useRef(null);
   const howItWorksRef = useRef(null);
   const featuresRef = useRef(null);
-  const faqRef = useRef(null); // New ref for the FAQ section
+  const faqRef = useRef(null);
   const ctaRef = useRef(null);
 
-  const [openFaqIndex, setOpenFaqIndex] = useState(null); // State to control which FAQ item is open
+  // Check if elements are in view for animations
+  const heroInView = useInView(heroRef, { once: true, amount: 0.3 });
+  const howItWorksInView = useInView(howItWorksRef, { once: true, amount: 0.3 });
+  const featuresInView = useInView(featuresRef, { once: true, amount: 0.3 });
+  const faqInView = useInView(faqRef, { once: true, amount: 0.3 });
+  const ctaInView = useInView(ctaRef, { once: true, amount: 0.3 });
 
-  useEffect(() => {
-    // Function to add 'opacity-100' class after a delay for fade-in effect
-    const fadeIn = (ref, delay) => {
-      if (ref.current) {
-        setTimeout(() => {
-          ref.current.classList.remove('opacity-0');
-          ref.current.classList.add('opacity-100');
-        }, delay);
-      }
-    };
+  // Scroll progress for parallax effects
+  const { scrollYProgress } = useScroll();
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  
+  // Spring animation for smoother interactions
+  const springConfig = { damping: 25, stiffness: 300 };
+  const scaleSpring = useSpring(1, springConfig);
 
-    // Apply fade-in to each section with a staggered delay
-    fadeIn(heroRef, 100);
-    fadeIn(howItWorksRef, 300);
-    fadeIn(featuresRef, 500);
-    fadeIn(faqRef, 700); // Apply fade-in to the new FAQ section
-    fadeIn(ctaRef, 900);
-  }, []);
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -57,192 +55,328 @@ const Home = () => {
     },
   ];
 
+  // Container variants for staggered animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  // Item variants for individual elements
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
   return (
     <>
-      <Header/>
+      <Header />
       <main>
         {/* Hero Section */}
-        <section
+        <motion.section
           ref={heroRef}
-          className="relative bg-gradient-to-br from-blue-500 to-purple-600 text-white py-24 px-4 text-center rounded-lg shadow-xl opacity-0 transition-opacity duration-1000 ease-in-out"
+          className="relative bg-gradient-to-br from-blue-500 to-purple-600 text-white py-24 px-4 text-center rounded-lg shadow-xl overflow-hidden"
+          style={{ y: heroY, opacity: heroOpacity }}
+          initial="hidden"
+          animate={heroInView ? "visible" : "hidden"}
+          variants={containerVariants}
         >
           <div className="container mx-auto">
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-4 animate-bounce-in">
-              Your Voice, Your Vote, Simplified.
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-0 animate-fade-in-delay-200">
-              Secure, transparent, and easy online elections.
-            </p>
-            <Link
-              to="/login"
-              className="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-100 transform hover:scale-105 transition duration-300 ease-in-out text-lg"
+            <motion.h1 
+              className="text-5xl md:text-6xl font-extrabold leading-tight mb-4"
+              variants={itemVariants}
             >
-              Get Started Now
-            </Link>
+              Your Voice, Your Vote, Simplified.
+            </motion.h1>
+            <motion.p 
+              className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto"
+              variants={itemVariants}
+            >
+              Secure, transparent, and easy online elections.
+            </motion.p>
+            <motion.div variants={itemVariants}>
+              <Link
+                to="/login"
+                className="inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-blue-100 transform transition duration-300 ease-in-out text-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Get Started Now
+              </Link>
+            </motion.div>
           </div>
-        </section>
+          
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <motion.div
+              className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full opacity-10"
+              animate={{
+                x: [0, 100, 0],
+                y: [0, -50, 0],
+              }}
+              transition={{
+                duration: 15,
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+            />
+            <motion.div
+              className="absolute -bottom-10 -left-10 w-60 h-60 bg-white rounded-full opacity-10"
+              animate={{
+                x: [0, -50, 0],
+                y: [0, 100, 0],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+            />
+          </div>
+        </motion.section>
 
         {/* How It Works Section */}
-        <section
+        <motion.section
           ref={howItWorksRef}
-          className="py-20 px-4 bg-gray-50 text-gray-800 text-center opacity-0 transition-opacity duration-1000 ease-in-out"
+          className="py-20 px-4 bg-gray-50 text-gray-800 text-center"
+          initial="hidden"
+          animate={howItWorksInView ? "visible" : "hidden"}
+          variants={containerVariants}
         >
           <div className="container mx-auto">
-            <h2 className="text-4xl font-bold mb-12 text-blue-700">How VoteEase Works</h2>
+            <motion.h2 
+              className="text-4xl font-bold mb-12 text-blue-700"
+              variants={itemVariants}
+            >
+              How VoteEase Works
+            </motion.h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <div className="bg-white p-8 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ease-in-out">
-                <FontAwesomeIcon icon={faUserPlus} size="3x" className="text-purple-500 mb-4" />
+              <motion.div 
+                className="bg-white p-8 rounded-lg shadow-lg"
+                variants={itemVariants}
+                whileHover={{ y: -10, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <motion.div
+                  whileHover={{ rotate: 10 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <FontAwesomeIcon icon={faUserPlus} size="3x" className="text-purple-500 mb-4" />
+                </motion.div>
                 <h3 className="text-2xl font-semibold mb-3">1. Register & Verify</h3>
                 <p className="text-gray-600">
                   Sign up easily and complete a quick verification process to ensure secure voting.
                 </p>
-              </div>
-              <div className="bg-white p-8 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ease-in-out">
-                <FontAwesomeIcon icon={faVoteYea} size="3x" className="text-green-500 mb-4" />
+              </motion.div>
+              <motion.div 
+                className="bg-white p-8 rounded-lg shadow-lg"
+                variants={itemVariants}
+                whileHover={{ y: -10, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <motion.div
+                  whileHover={{ rotate: 10 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <FontAwesomeIcon icon={faVoteYea} size="3x" className="text-green-500 mb-4" />
+                </motion.div>
                 <h3 className="text-2xl font-semibold mb-3">2. Cast Your Vote</h3>
                 <p className="text-gray-600">
                   Browse active elections and cast your vote securely from any device.
                 </p>
-              </div>
-              <div className="bg-white p-8 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ease-in-out">
-                <FontAwesomeIcon icon={faChartBar} size="3x" className="text-red-500 mb-4" />
+              </motion.div>
+              <motion.div 
+                className="bg-white p-8 rounded-lg shadow-lg"
+                variants={itemVariants}
+                whileHover={{ y: -10, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <motion.div
+                  whileHover={{ rotate: 10 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <FontAwesomeIcon icon={faChartBar} size="3x" className="text-red-500 mb-4" />
+                </motion.div>
                 <h3 className="text-2xl font-semibold mb-3">3. View Results</h3>
                 <p className="text-gray-600">
                   Access real-time election results and ensure transparency.
                 </p>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Key Features Section */}
-        <section
+        <motion.section
           ref={featuresRef}
-          className="py-20 px-4 bg-blue-100 text-gray-800 opacity-0 transition-opacity duration-1000 ease-in-out"
+          className="py-20 px-4 bg-blue-100 text-gray-800"
+          initial="hidden"
+          animate={featuresInView ? "visible" : "hidden"}
+          variants={containerVariants}
         >
           <div className="container mx-auto">
-            <h2 className="text-4xl font-bold mb-12 text-blue-700 text-center">Key Features</h2>
+            <motion.h2 
+              className="text-4xl font-bold mb-12 text-blue-700 text-center"
+              variants={itemVariants}
+            >
+              Key Features
+            </motion.h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">✔</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">High Security</h3>
-                  <p className="text-gray-600">
-                    Robust encryption and authentication protocols protect every vote.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">🌐</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">User-Friendly Interface</h3>
-                  <p className="text-gray-600">
-                    Intuitive design ensures a seamless voting experience for everyone.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">📊</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Real-time Results</h3>
-                  <p className="text-gray-600">
-                    Monitor election progress and view results as they happen.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">✅</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Transparency</h3>
-                  <p className="text-gray-600">
-                    Blockchain-inspired principles ensure verifiable and transparent elections.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">📱</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Mobile Responsive</h3>
-                  <p className="text-gray-600">
-                    Vote from any device, whether it's your desktop, tablet, or smartphone.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
-                <span className="text-blue-500 text-3xl">⏱️</span>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Time-Saving</h3>
-                  <p className="text-gray-600">
-                    Eliminate manual processes and accelerate election management.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ Section */}
-        <section
-          ref={faqRef}
-          className="py-20 px-4 bg-gray-50 text-gray-800 opacity-0 transition-opacity duration-1000 ease-in-out"
-        >
-          <div className="container mx-auto max-w-4xl">
-            <h2 className="text-4xl font-bold mb-12 text-blue-700 text-center">
-              Your Questions, Answered.
-            </h2>
-            <div className="space-y-4">
-              {faqItems.map((item, index) => (
-                <div
+              {[
+                { icon: "✔", title: "High Security", description: "Robust encryption and authentication protocols protect every vote." },
+                { icon: "🌐", title: "User-Friendly Interface", description: "Intuitive design ensures a seamless voting experience for everyone." },
+                { icon: "📊", title: "Real-time Results", description: "Monitor election progress and view results as they happen." },
+                { icon: "✅", title: "Transparency", description: "Blockchain-inspired principles ensure verifiable and transparent elections." },
+                { icon: "📱", title: "Mobile Responsive", description: "Vote from any device, whether it's your desktop, tablet, or smartphone." },
+                { icon: "⏱️", title: "Time-Saving", description: "Eliminate manual processes and accelerate election management." }
+              ].map((feature, index) => (
+                <motion.div
                   key={index}
-                  className="bg-white p-6 rounded-lg shadow-md cursor-pointer"
-                  onClick={() => toggleFaq(index)}
+                  className="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4"
+                  variants={itemVariants}
+                  whileHover={{ 
+                    scale: 1.03, 
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" 
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {item.question}
-                    </h3>
-                    <FontAwesomeIcon
-                      icon={faChevronDown}
-                      className={`text-gray-500 transform transition-transform duration-300 ${
-                        openFaqIndex === index ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-                  <div
-                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                      openFaqIndex === index ? 'max-h-96 mt-4' : 'max-h-0'
-                    }`}
+                  <motion.span 
+                    className="text-blue-500 text-3xl"
+                    whileHover={{ rotate: 10, scale: 1.2 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
-                    <p className="text-gray-600 border-t pt-4 mt-4 border-gray-200">
-                      {item.answer}
-                    </p>
+                    {feature.icon}
+                  </motion.span>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-gray-600">{feature.description}</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
+
+        {/* FAQ Section */}
+        <motion.section
+          ref={faqRef}
+          className="py-20 px-4 bg-gray-50 text-gray-800"
+          initial="hidden"
+          animate={faqInView ? "visible" : "hidden"}
+          variants={containerVariants}
+        >
+          <div className="container mx-auto max-w-4xl">
+            <motion.h2 
+              className="text-4xl font-bold mb-12 text-blue-700 text-center"
+              variants={itemVariants}
+            >
+              Your Questions, Answered.
+            </motion.h2>
+            <div className="space-y-4">
+              {faqItems.map((item, index) => (
+                <motion.div
+                  key={index}
+                  className="bg-white rounded-lg shadow-md overflow-hidden"
+                  variants={itemVariants}
+                  whileHover={{ boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <div
+                    className="p-6 cursor-pointer flex justify-between items-center"
+                    onClick={() => toggleFaq(index)}
+                  >
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {item.question}
+                    </h3>
+                    <motion.div
+                      animate={{ rotate: openFaqIndex === index ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faChevronDown}
+                        className="text-gray-500"
+                      />
+                    </motion.div>
+                  </div>
+                  <motion.div
+                    className="overflow-hidden"
+                    initial={{ height: 0 }}
+                    animate={{ height: openFaqIndex === index ? "auto" : 0 }}
+                    transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                    <div className="px-6 pb-6">
+                      <p className="text-gray-600 border-t pt-4 border-gray-200">
+                        {item.answer}
+                      </p>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
 
         {/* Call to Action Section */}
-        <section
+        <motion.section
           ref={ctaRef}
-          className="py-20 px-4 bg-gradient-to-r from-purple-600 to-blue-700 text-white text-center opacity-0 transition-opacity duration-1000 ease-in-out"
+          className="py-20 px-4 bg-gradient-to-r from-purple-600 to-blue-700 text-white text-center relative overflow-hidden"
+          initial="hidden"
+          animate={ctaInView ? "visible" : "hidden"}
+          variants={containerVariants}
         >
-          <div className="container mx-auto">
-            <h2 className="text-4xl font-bold mb-6">Ready to Make Your Voice Heard?</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Join VoteEase today and participate in the future of democratic elections.
-            </p>
-            <Link
-              to="/login"
-              className="inline-block bg-white text-purple-700 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-purple-100 transform hover:scale-105 transition duration-300 ease-in-out text-lg"
+          <div className="container mx-auto relative z-10">
+            <motion.h2 
+              className="text-4xl font-bold mb-6"
+              variants={itemVariants}
             >
-              Register Now
-            </Link>
+              Ready to Make Your Voice Heard?
+            </motion.h2>
+            <motion.p 
+              className="text-xl mb-8 max-w-2xl mx-auto"
+              variants={itemVariants}
+            >
+              Join VoteEase today and participate in the future of democratic elections.
+            </motion.p>
+            <motion.div variants={itemVariants}>
+              <Link
+                to="/login"
+                className="inline-block bg-white text-purple-700 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-purple-100 transition duration-300 ease-in-out text-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Register Now
+              </Link>
+            </motion.div>
           </div>
-        </section>
+          
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <motion.div
+              className="absolute top-0 left-0 w-full h-full bg-white opacity-5"
+              animate={{
+                x: [0, "100%", 0],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+            />
+          </div>
+        </motion.section>
       </main>
-      <Footer/>
+      <Footer />
     </>
   );
 };
