@@ -5,42 +5,42 @@ import { getAuth } from "@clerk/express";
 
 const router = express.Router();
 
-/**
- * SYNC USER – Call this once after Clerk login (e.g., on app load)
- * Now uses req.auth directly → NO extra API call to Clerk!
- */
-// routes/userRoutes.js - Update the /sync route
-// routes/userRoutes.js → POST /api/users/sync
 router.post("/sync", async (req, res) => {
   try {
     const { userId } = getAuth(req);
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    if (!userId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const clerkUser = req.auth; // This contains everything from Clerk
-      
-    // SAFELY extract email (Clerk sometimes hides it in emailAddresses)
-    const primaryEmail = clerkUser.emailAddresses?.find(e => e.id === clerkUser.primaryEmailAddressId);
-    const email = primaryEmail?.emailAddress || clerkUser.email || null;
-// routes/userRoutes.js - inside /sync
-const roleFromToken = clerkUser.publicMetadata?.role;
-let role = roleFromToken || "voter";
 
-// Fallback: fetch from Clerk API if not in token
-if (!roleFromToken && userId) {
-  try {
-    const clerkResponse = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-    const clerkData = await clerkResponse.json();
-    role = clerkData.public_metadata?.role || "voter";
-    console.log("Fetched role from Clerk API:", role);
-  } catch (e) {
-    console.log("Could not fetch from Clerk API, using voter");
-  }
-}// "admin" if set in Clerk dashboard
+    // SAFELY extract email (Clerk sometimes hides it in emailAddresses)
+    const primaryEmail = clerkUser.emailAddresses?.find(
+      (e) => e.id === clerkUser.primaryEmailAddressId
+    );
+    const email = primaryEmail?.emailAddress || clerkUser.email || null;
+    // routes/userRoutes.js - inside /sync
+    const roleFromToken = clerkUser.publicMetadata?.role;
+    let role = roleFromToken || "voter";
+
+    // Fallback: fetch from Clerk API if not in token
+    if (!roleFromToken && userId) {
+      try {
+        const clerkResponse = await fetch(
+          `https://api.clerk.com/v1/users/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const clerkData = await clerkResponse.json();
+        role = clerkData.public_metadata?.role || "voter";
+        console.log("Fetched role from Clerk API:", role);
+      } catch (e) {
+        console.log("Could not fetch from Clerk API, using voter");
+      }
+    } // "admin" if set in Clerk dashboard
 
     let user = await User.findOne({ clerkId: userId });
 
@@ -49,9 +49,9 @@ if (!roleFromToken && userId) {
         clerkId: userId,
         firstName: clerkUser.firstName || null,
         lastName: clerkUser.lastName || null,
-        email: email,                    // ← This is now safe (can be null)
+        email: email, // ← This is now safe (can be null)
         imageUrl: clerkUser.imageUrl || null,
-        role: role,                      // ← Sets "admin" correctly
+        role: role, // ← Sets "admin" correctly
       });
       await user.save();
       console.log("New user created:", user.email, "Role:", user.role);
@@ -79,7 +79,8 @@ router.get("/me", async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await User.findOne({ clerkId: userId });
-    if (!user) return res.status(404).json({ message: "User not found – sync first" });
+    if (!user)
+      return res.status(404).json({ message: "User not found – sync first" });
 
     res.json({ success: true, user });
   } catch (error) {
@@ -105,7 +106,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 // routes/userRoutes.js
 router.post("/complete-profile", async (req, res) => {
   try {
@@ -114,13 +114,29 @@ router.post("/complete-profile", async (req, res) => {
     if (!clerkId) return res.status(401).json({ message: "Unauthorized" });
 
     const {
-      fullName, email, phone, dateOfBirth,
-      voterId, aadharCard,
-      district, taluka, city
-    } = req.body
+      fullName,
+      email,
+      phone,
+      dateOfBirth,
+      voterId,
+      aadharCard,
+      district,
+      taluka,
+      city,
+    } = req.body;
 
     // Validate all fields
-    if (!fullName || !email || !phone || !dateOfBirth || !voterId || !aadharCard || !district || !taluka || !city) {
+    if (
+      !fullName ||
+      !email ||
+      !phone ||
+      !dateOfBirth ||
+      !voterId ||
+      !aadharCard ||
+      !district ||
+      !taluka ||
+      !city
+    ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -135,13 +151,18 @@ router.post("/complete-profile", async (req, res) => {
       { clerkId },
       {
         $set: {
-          fullName, email, phone,
+          fullName,
+          email,
+          phone,
           dateOfBirth: new Date(dateOfBirth),
-          voterId, aadharCard,
-          district, taluka, city,
+          voterId,
+          aadharCard,
+          district,
+          taluka,
+          city,
           profileCompleted: true,
-          hasVoted: false
-        }
+          hasVoted: false,
+        },
       },
       { upsert: true, new: true }
     );
@@ -150,7 +171,9 @@ router.post("/complete-profile", async (req, res) => {
   } catch (err) {
     console.error("Profile completion error:", err.message);
     if (err.code === 11000) {
-      return res.status(400).json({ message: "Voter ID or Aadhar already registered" });
+      return res
+        .status(400)
+        .json({ message: "Voter ID or Aadhar already registered" });
     }
     res.status(500).json({ message: "Server error" });
   }

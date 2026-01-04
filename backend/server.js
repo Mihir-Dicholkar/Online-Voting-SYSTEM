@@ -4,7 +4,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { clerkMiddleware } from "@clerk/express";
-
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import resultsRouter from "./routes/results.js";
 import userRoutes from "./routes/userRoutes.js";
 import electionRoutes from "./routes/electionRoutes.js";
 
@@ -43,7 +44,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use("/api/users", userRoutes);
   app.use("/api/elections", electionRoutes);
-
+  app.use("/api/dashboard", dashboardRoutes);
+  app.use("/api/results", resultsRouter);
 app.get("/", (req, res) => {
   res.json({ message: "Maharashtra Voting System API – Clerk Ready!" });
 });
