@@ -5,6 +5,7 @@ import axios from "axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 /* icons */
 import {
@@ -13,10 +14,11 @@ import {
   Users,
   Loader2,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
 });
 
 /* 🔢 animated counter hook */
@@ -43,16 +45,30 @@ export default function LiveElections() {
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [declaringId, setDeclaringId] = useState(null);
 
   const fetchLiveElections = async () => {
     try {
-      const res = await api.get("/elections/live");
+      const res = await api.get("/api/elections/live");
       setElections(res.data);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to fetch live elections", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const declareResults = async (electionId) => {
+    try {
+      setDeclaringId(electionId);
+      await api.post(`/api/elections/${electionId}/declare`);
+      fetchLiveElections(); // refresh list
+    } catch (err) {
+      console.error("Failed to declare results", err);
+      alert("Error declaring results");
+    } finally {
+      setDeclaringId(null);
     }
   };
 
@@ -89,13 +105,46 @@ export default function LiveElections() {
       </div>
 
       {elections.length === 0 ? (
-        <p className="text-muted-foreground">
-          No live elections currently.
-        </p>
+        <p className="text-muted-foreground">No live elections currently.</p>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {elections.map((election) => (
-            <LiveElectionCard key={election._id} election={election} />
+            <Card key={election._id} className="relative overflow-hidden">
+              <Badge className="absolute top-3 right-3 bg-red-600 animate-pulse">
+                LIVE
+              </Badge>
+
+              <CardHeader>
+                <CardTitle className="text-xl">{election.title}</CardTitle>
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  {election.region}
+                </p>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <ElectionCandidates election={election} />
+
+                {/* 🏆 Declare Results Button */}
+                <Button
+                  onClick={() => declareResults(election._id)}
+                  disabled={declaringId === election._id}
+                  className="w-full mt-4"
+                >
+                  {declaringId === election._id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Declaring...
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-4 h-4 mr-2" />
+                      Declare Results
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
@@ -104,52 +153,32 @@ export default function LiveElections() {
 }
 
 /* ---------------------------------- */
-/* Individual Election Card            */
+/* Candidates                          */
 /* ---------------------------------- */
 
-function LiveElectionCard({ election }) {
+function ElectionCandidates({ election }) {
   const totalVotes = election.candidates.reduce(
     (sum, c) => sum + c.votes,
     0
   );
 
   return (
-    <Card className="relative overflow-hidden">
-      {/* LIVE badge */}
-      <Badge className="absolute top-3 right-3 bg-red-600 animate-pulse">
-        LIVE
-      </Badge>
+    <>
+      <p className="text-sm font-medium flex items-center gap-2">
+        <Users className="w-4 h-4" />
+        Total Votes: <strong>{totalVotes}</strong>
+      </p>
 
-      <CardHeader>
-        <CardTitle className="text-xl">{election.title}</CardTitle>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="w-4 h-4" />
-          {election.region}
-        </p>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <p className="text-sm font-medium flex items-center gap-2">
-          <Users className="w-4 h-4" />
-          Total Votes: <strong>{totalVotes.toLocaleString()}</strong>
-        </p>
-
-        {/* Candidates */}
-        {election.candidates.map((candidate) => (
-          <CandidateRow
-            key={candidate._id}
-            candidate={candidate}
-            totalVotes={totalVotes}
-          />
-        ))}
-      </CardContent>
-    </Card>
+      {election.candidates.map((candidate) => (
+        <CandidateRow
+          key={candidate._id}
+          candidate={candidate}
+          totalVotes={totalVotes}
+        />
+      ))}
+    </>
   );
 }
-
-/* ---------------------------------- */
-/* Candidate Row                       */
-/* ---------------------------------- */
 
 function CandidateRow({ candidate, totalVotes }) {
   const animatedVotes = useCountUp(candidate.votes);
@@ -162,13 +191,9 @@ function CandidateRow({ candidate, totalVotes }) {
         <span className="font-medium">
           {candidate.name} ({candidate.party})
         </span>
-        <span className="font-semibold">
-          {animatedVotes.toLocaleString()}
-        </span>
+        <span className="font-semibold">{animatedVotes}</span>
       </div>
-
       <Progress value={percentage} className="h-2" />
-
       <p className="text-xs text-muted-foreground text-right">
         {percentage}%
       </p>

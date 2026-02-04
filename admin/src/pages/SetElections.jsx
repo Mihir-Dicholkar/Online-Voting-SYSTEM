@@ -36,12 +36,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const MAHARASHTRA_REGIONS = [
-  "Mumbai City",
-  "Mumbai Suburban",
-  "Thane",
-  "Pune",
-  "Nashik",
-  "Nagpur",
+  "Mumbai City", "Mumbai Suburban", "Thane", "Palghar", "Raigad", "Ratnagiri", "Sindhudurg",
+  "Pune", "Satara", "Sangli", "Kolhapur", "Solapur", "Ahmednagar", "Nashik", "Dhule", "Jalgaon", "Nandurbar",
+  "Aurangabad", "Jalna", "Beed", "Parbhani", "Hingoli", "Nanded", "Latur", "Osmanabad",
+  "Amravati", "Akola", "Washim", "Buldhana", "Yavatmal", "Wardha", "Nagpur", "Bhandara", "Gondia", "Chandrap ", "Chandrapur", "Gadchiroli"
+
 ];
 
 export default function SetElections() {
@@ -60,6 +59,7 @@ export default function SetElections() {
     electionId: "",
     name: "",
     party: "",
+    logoUrl: "",
   });
 
   const [editElection, setEditElection] = useState(null);
@@ -138,26 +138,45 @@ export default function SetElections() {
   };
 
   /* ---------------- ADD CANDIDATE ---------------- */
-  const addCandidate = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      await api.post(
-        `/elections/${candidateForm.electionId}/candidates`,
-        {
-          name: candidateForm.name,
-          party: candidateForm.party,
-        }
-      );
-      toast.success("Candidate added");
-      setCandidateForm({ electionId: "", name: "", party: "" });
-      fetchElections();
-    } catch {
-      toast.error("Candidate add failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+const addCandidate = async (e) => {
+  e.preventDefault();
+
+  if (
+    !candidateForm.electionId ||
+    !candidateForm.name ||
+    !candidateForm.party ||
+    !candidateForm.logoUrl
+  ) {
+    toast.error("All fields are required");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    await api.post(
+      `/elections/${candidateForm.electionId}/candidates`,
+      {
+        name: candidateForm.name,
+        party: candidateForm.party,
+        logoUrl: candidateForm.logoUrl,
+      }
+    );
+
+    toast.success("Candidate added");
+    setCandidateForm({
+      electionId: "",
+      name: "",
+      party: "",
+      logoUrl: "",
+    });
+    fetchElections();
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Candidate add failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <>
@@ -242,7 +261,7 @@ export default function SetElections() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={addCandidate} className="space-y-4">
+               <form onSubmit={addCandidate} className="space-y-4">
                 <Select
                   value={candidateForm.electionId}
                   onValueChange={(v) =>
@@ -277,6 +296,14 @@ export default function SetElections() {
                     })
                   }
                 />
+                <Input
+                  placeholder="Party Logo URL"
+                  value={candidateForm.logoUrl}
+                  onChange={(e) =>
+                    setCandidateForm({ ...candidateForm, logoUrl: e.target.value })
+                  }
+                />
+
                 <Button className="w-full">Add Candidate</Button>
               </form>
             </CardContent>
@@ -326,8 +353,16 @@ export default function SetElections() {
                     Candidates ({e.candidates.length})
                   </p>
                   {e.candidates.map((c) => (
-                    <div key={c._id} className="text-sm">
-                      • {c.name} ({c.party})
+                    <div key={c._id} className="flex items-center gap-3 border p-2 rounded">
+                      <img
+                        src={c.logoUrl}
+                        alt={c.party}
+                        className="w-10 h-10 object-contain"
+                      />
+                      <div>
+                        <p className="font-semibold">{c.name}</p>
+                        <p className="text-sm text-gray-500">{c.party}</p>
+                      </div>
                     </div>
                   ))}
                 </div>

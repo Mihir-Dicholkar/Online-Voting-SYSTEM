@@ -4,6 +4,12 @@ import mongoose from "mongoose";
 const candidateSchema = new mongoose.Schema({
   name: { type: String, required: true },
   party: { type: String, required: true },
+ logoUrl: {
+  type: String,
+  required: function () {
+    return this.isNew;
+  },
+},// ✅ NEW
   votes: { type: Number, default: 0 },
 });
 

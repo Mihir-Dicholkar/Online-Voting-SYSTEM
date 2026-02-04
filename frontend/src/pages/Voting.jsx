@@ -132,26 +132,35 @@ useEffect(() => {
   const toggleExpansion = (id) => {
     setExpandedSectorId(id === expandedSectorId ? null : id);
   };
+const handleVote = async (electionId, candidateId) => {
+  if (hasVotedMap[electionId]) return;
 
-  const handleVote = async (electionId, candidateName, party) => {
-    if (hasVotedMap[electionId]) return;
+  // Optimistic UI lock (prevents double-click spam)
+  setHasVotedMap(prev => ({ ...prev, [electionId]: true }));
 
-    try {
-      await axios.post(
-        `/api/elections/${electionId}/vote`,
-        { candidateId: elections.find(e => e._id === electionId).candidates.find(c => c.name === candidateName)._id },
-        { headers: { Authorization: `Bearer ${user.id}` } }
-      );
+  try {
+    await api.post(`/api/elections/${electionId}/vote`, {
+      candidateId,
+    });
 
-      setHasVotedMap(prev => ({ ...prev, [electionId]: true }));
-      setModalMessage(`Your vote for "${candidateName} (${party})" has been recorded successfully!`);
-      setShowSuccessModal(true);
-      setExpandedSectorId(null);
-    } catch (err) {
-      setModalMessage(err.response?.data?.message || "Vote failed. Try again.");
-      setShowSuccessModal(true);
-    }
-  };
+    setModalMessage("Your vote has been recorded successfully!");
+    setShowSuccessModal(true);
+    setExpandedSectorId(null);
+  } catch (err) {
+    // rollback if failed
+    setHasVotedMap(prev => {
+      const copy = { ...prev };
+      delete copy[electionId];
+      return copy;
+    });
+
+    setModalMessage(
+      err.response?.data?.message || "Vote failed. Try again."
+    );
+    setShowSuccessModal(true);
+  }
+};
+
 
   const totalVotesAll = useMemo(() => 
     elections.reduce((sum, e) => sum + e.candidates.reduce((s, c) => s + c.votes, 0), 0),
@@ -254,7 +263,10 @@ useEffect(() => {
 
                           {canVote && (
                             <button
-                              onClick={() => handleVote(election._id, candidate.name, candidate.party)}
+                            onClick={() =>
+  handleVote(election._id, candidate._id)
+}
+
                               className="mt-3 w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition"
                             >
                               Vote for {candidate.name.split(" ")[0]}

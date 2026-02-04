@@ -3,7 +3,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+const API_URL = import.meta.env.VITE_API_URL;
 export default function SyncUser() {
   const { getToken, userId, isLoaded } = useAuth();
   const [syncStatus, setSyncStatus] = useState("idle"); // idle, syncing, success, error
@@ -14,13 +14,13 @@ export default function SyncUser() {
     const syncUser = async () => {
       setSyncStatus("syncing");
       toast.info("Syncing user to database...");
-
-      try {
+    try {
         const token = await getToken();
-        console.log("🔄 Frontend: Token fetched, calling sync"); // DEBUG
+        console.log("🔄 Frontend: Token fetched, calling sync");
+        console.log("🌍 API URL:", API_URL); // DEBUG
 
         const res = await axios.post(
-          "http://localhost:5000/api/users/sync",
+          `${API_URL}/api/users/sync`,
           {}, // empty body
           { 
             headers: { Authorization: `Bearer ${token}` },

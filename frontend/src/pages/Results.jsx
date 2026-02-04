@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 // Import the charts and chart components
 import { Pie, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/",
+});
 
 // Register Chart.js components
 ChartJS.register(
@@ -20,157 +26,211 @@ ChartJS.register(
 const Results = () => {
   const [selectedSector, setSelectedSector] = useState(null);
   const [activeTab, setActiveTab] = useState('lokSabha');
+  const [sectors, setSectors] = useState([]);
+const [loading, setLoading] = useState(true);
+const transformBackendResults = (elections) => {
+  return elections.map((election) => {
+    const totalVotes = election.candidates.reduce(
+      (sum, c) => sum + c.votes,
+      0
+    );
+
+    const results = {};
+    election.candidates.forEach((c) => {
+      results[c.party] = {
+        votes: c.votes,
+        winner: election.winner?.includes(c.name),
+      };
+    });
+
+    return {
+      id: election._id,
+      name: election.region,
+      description: `${election.title} Results`,
+      lokSabha: {
+        totalVotes,
+        voterTurnout: totalVotes > 0 ? Math.min(100, Math.round((totalVotes / 2000000) * 100)) : 0,
+        results,
+      },
+      rajyaSabha: {
+        totalVotes: 0,
+        voterTurnout: 0,
+        results: {},
+      },
+    };
+  });
+};
+
+useEffect(() => {
+  const fetchResults = async () => {
+    try {
+      const res = await api.get("/api/results/declared");
+   console.log("📦 RAW API RESPONSE:", res.data);
+
+    const transformed = transformBackendResults(res.data);
+
+    console.log("🔁 TRANSFORMED DATA (UI FORMAT):", transformed);
+      setSectors(transformed);
+    } catch (err) {
+      console.error("Failed to load results", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchResults();
+}, []);
 
   // More detailed dummy data for Maharashtra sectors
-  const maharashtraSectors = [
-    {
-      id: 'mumbai-north',
-      name: 'Mumbai North',
-      lokSabha: {
-        totalVotes: 1250000,
-        voterTurnout: 65,
-        results: {
-          'Party A': { votes: 600000, winner: true },
-          'Party B': { votes: 450000, winner: false },
-          'Party C': { votes: 200000, winner: false },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0, // No direct election for Rajya Sabha
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 1 },
-          'Party B': { seats: 0 },
-          'Party C': { seats: 0 },
-        },
-      },
-      description: 'Key metropolitan constituency with diverse demographics.',
-    },
-    {
-      id: 'pune',
-      name: 'Pune',
-      lokSabha: {
-        totalVotes: 1500000,
-        voterTurnout: 68,
-        results: {
-          'Party A': { votes: 550000, winner: false },
-          'Party B': { votes: 700000, winner: true },
-          'Party C': { votes: 250000, winner: false },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0,
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 0 },
-          'Party B': { seats: 1 },
-          'Party C': { seats: 0 },
-        },
-      },
-      description: 'Educational and IT hub of Maharashtra.',
-    },
-    {
-      id: 'nagpur',
-      name: 'Nagpur',
-      lokSabha: {
-        totalVotes: 1100000,
-        voterTurnout: 72,
-        results: {
-          'Party A': { votes: 580000, winner: true },
-          'Party B': { votes: 400000, winner: false },
-          'Party C': { votes: 120000, winner: false },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0,
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 1 },
-          'Party B': { seats: 0 },
-          'Party C': { seats: 0 },
-        },
-      },
-      description: 'Winter capital and a major political center.',
-    },
-    {
-      id: 'nashik',
-      name: 'Nashik',
-      lokSabha: {
-        totalVotes: 1050000,
-        voterTurnout: 63,
-        results: {
-          'Party A': { votes: 300000, winner: false },
-          'Party B': { votes: 350000, winner: false },
-          'Party C': { votes: 400000, winner: true },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0,
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 0 },
-          'Party B': { seats: 0 },
-          'Party C': { seats: 1 },
-        },
-      },
-      description: 'Known for its vineyards and religious significance.',
-    },
-    {
-      id: 'aurangabad',
-      name: 'Aurangabad',
-      lokSabha: {
-        totalVotes: 980000,
-        voterTurnout: 60,
-        results: {
-          'Party A': { votes: 400000, winner: false },
-          'Party B': { votes: 500000, winner: true },
-          'Party C': { votes: 80000, winner: false },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0,
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 0 },
-          'Party B': { seats: 1 },
-          'Party C': { seats: 0 },
-        },
-      },
-      description: 'Historical city with significant cultural heritage.',
-    },
-    {
-      id: 'kolhapur',
-      name: 'Kolhapur',
-      lokSabha: {
-        totalVotes: 850000,
-        voterTurnout: 70,
-        results: {
-          'Party A': { votes: 450000, winner: true },
-          'Party B': { votes: 300000, winner: false },
-          'Party C': { votes: 100000, winner: false },
-        },
-      },
-      rajyaSabha: {
-        totalVotes: 0,
-        voterTurnout: 0,
-        results: {
-          'Party A': { seats: 1 },
-          'Party B': { seats: 0 },
-          'Party C': { seats: 0 },
-        },
-      },
-      description: 'Known for its traditional industries and wrestling.',
-    },
-  ];
+  // const sectors = [
+  //   {
+  //     id: 'mumbai-north',
+  //     name: 'Mumbai North',
+  //     lokSabha: {
+  //       totalVotes: 1250000,
+  //       voterTurnout: 65,
+  //       results: {
+  //         'Party A': { votes: 600000, winner: true },
+  //         'Party B': { votes: 450000, winner: false },
+  //         'Party C': { votes: 200000, winner: false },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0, // No direct election for Rajya Sabha
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 1 },
+  //         'Party B': { seats: 0 },
+  //         'Party C': { seats: 0 },
+  //       },
+  //     },
+  //     description: 'Key metropolitan constituency with diverse demographics.',
+  //   },
+  //   {
+  //     id: 'pune',
+  //     name: 'Pune',
+  //     lokSabha: {
+  //       totalVotes: 1500000,
+  //       voterTurnout: 68,
+  //       results: {
+  //         'Party A': { votes: 550000, winner: false },
+  //         'Party B': { votes: 700000, winner: true },
+  //         'Party C': { votes: 250000, winner: false },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0,
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 0 },
+  //         'Party B': { seats: 1 },
+  //         'Party C': { seats: 0 },
+  //       },
+  //     },
+  //     description: 'Educational and IT hub of Maharashtra.',
+  //   },
+  //   {
+  //     id: 'nagpur',
+  //     name: 'Nagpur',
+  //     lokSabha: {
+  //       totalVotes: 1100000,
+  //       voterTurnout: 72,
+  //       results: {
+  //         'Party A': { votes: 580000, winner: true },
+  //         'Party B': { votes: 400000, winner: false },
+  //         'Party C': { votes: 120000, winner: false },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0,
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 1 },
+  //         'Party B': { seats: 0 },
+  //         'Party C': { seats: 0 },
+  //       },
+  //     },
+  //     description: 'Winter capital and a major political center.',
+  //   },
+  //   {
+  //     id: 'nashik',
+  //     name: 'Nashik',
+  //     lokSabha: {
+  //       totalVotes: 1050000,
+  //       voterTurnout: 63,
+  //       results: {
+  //         'Party A': { votes: 300000, winner: false },
+  //         'Party B': { votes: 350000, winner: false },
+  //         'Party C': { votes: 400000, winner: true },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0,
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 0 },
+  //         'Party B': { seats: 0 },
+  //         'Party C': { seats: 1 },
+  //       },
+  //     },
+  //     description: 'Known for its vineyards and religious significance.',
+  //   },
+  //   {
+  //     id: 'aurangabad',
+  //     name: 'Aurangabad',
+  //     lokSabha: {
+  //       totalVotes: 980000,
+  //       voterTurnout: 60,
+  //       results: {
+  //         'Party A': { votes: 400000, winner: false },
+  //         'Party B': { votes: 500000, winner: true },
+  //         'Party C': { votes: 80000, winner: false },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0,
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 0 },
+  //         'Party B': { seats: 1 },
+  //         'Party C': { seats: 0 },
+  //       },
+  //     },
+  //     description: 'Historical city with significant cultural heritage.',
+  //   },
+  //   {
+  //     id: 'kolhapur',
+  //     name: 'Kolhapur',
+  //     lokSabha: {
+  //       totalVotes: 850000,
+  //       voterTurnout: 70,
+  //       results: {
+  //         'Party A': { votes: 450000, winner: true },
+  //         'Party B': { votes: 300000, winner: false },
+  //         'Party C': { votes: 100000, winner: false },
+  //       },
+  //     },
+  //     rajyaSabha: {
+  //       totalVotes: 0,
+  //       voterTurnout: 0,
+  //       results: {
+  //         'Party A': { seats: 1 },
+  //         'Party B': { seats: 0 },
+  //         'Party C': { seats: 0 },
+  //       },
+  //     },
+  //     description: 'Known for its traditional industries and wrestling.',
+  //   },
+  // ];
 
   // Function to calculate overall summary data
   const getOverallSummary = () => {
     let lokSabhaSeats = {};
     let rajyaSabhaSeats = {};
     let totalTurnout = 0;
-    let totalSectors = maharashtraSectors.length;
+    let totalSectors = sectors.length;
 
-    maharashtraSectors.forEach(sector => {
+    sectors.forEach(sector => {
       // Aggregate Lok Sabha seats
       Object.entries(sector.lokSabha.results).forEach(([party, data]) => {
         if (data.winner) {
@@ -299,6 +359,17 @@ const Results = () => {
       }
     }
   };
+if (loading) {
+  return (
+    <>
+      <Header />
+      <div className="text-center py-20 text-xl text-gray-600">
+        Loading election results...
+      </div>
+      <Footer />
+    </>
+  );
+}
 
   return (
     <>
@@ -600,7 +671,7 @@ const Results = () => {
 
               {/* Grid view of all sectors */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {maharashtraSectors.map((sector, index) => (
+                {sectors.map((sector, index) => (
                   <motion.div
                     key={sector.id}
                     variants={itemVariants}

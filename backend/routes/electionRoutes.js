@@ -3,7 +3,7 @@ import express from "express";
 import Election from "../models/Election.js";
 import User from "../models/User.js";
 import { getAuth } from "@clerk/express";
-
+import { declareElectionResult } from "../controllers/electionController.js";
 const router = express.Router();
 
 // Helper: Get current user + check if admin
@@ -72,61 +72,72 @@ router.post("/", async (req, res) => {
 router.post("/:id/candidates", async (req, res) => {
   try {
     const currentUser = await getCurrentUser(req);
+    console.log("REQ BODY:", req.body);
+
     if (currentUser.role !== "admin") {
       return res.status(403).json({ message: "Admin only" });
     }
 
+    const { name, party, logoUrl } = req.body;
+
+    if (!name || !party || !logoUrl) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
     const election = await Election.findById(req.params.id);
-    if (!election)
+    if (!election) {
       return res.status(404).json({ message: "Election not found" });
+    }
 
-    const { name, party } = req.body;
-    election.candidates.push({ name, party });
+    election.candidates.push({ name, party, logoUrl });
     await election.save();
-
-    if (!name || !party) {
-  return res.status(400).json({ message: "Name and party required" });
-}
 
     res.json(election);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
+
 
 // ========== ADMIN ONLY: Declare Winner ==========
-router.put("/:id/declare-winner", async (req, res) => {
+router.post("/:id/declare-result",  async (req, res) => {
   try {
-    const currentUser = await getCurrentUser(req);
-    if (currentUser.role !== "admin")
-      return res.status(403).json({ message: "Admin only" });
-
     const election = await Election.findById(req.params.id);
-    if (!election)
+
+    if (!election) {
       return res.status(404).json({ message: "Election not found" });
+    }
 
-    const candidateExists = election.candidates.some(
-  c => c.name === winnerName
-);
+    if (election.status === "completed") {
+      return res.status(400).json({ message: "Election already completed" });
+    }
 
-if (!candidateExists) {
-  return res.status(400).json({ message: "Invalid winner" });
-}
+    if (!election.candidates || election.candidates.length === 0) {
+      return res.status(400).json({ message: "No candidates found" });
+    }
 
+    // 🏆 Find highest voted candidate
+    const winnerCandidate = election.candidates.reduce((prev, curr) =>
+      curr.votes > prev.votes ? curr : prev
+    );
 
-    const { winnerName } = req.body;
     election.status = "completed";
-    election.winner = winnerName;
+    election.winner = `${winnerCandidate.name} (${winnerCandidate.party})`;
+
     await election.save();
 
-    res.json(election);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.json({
+      success: true,
+      message: "Election result declared",
+      winner: winnerCandidate,
+    });
+  } catch (err) {
+    console.error("Declare result error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-
-
+router.post("/:id/declare", declareElectionResult);
 
 // ========== VOTER: Get active election for my region ==========
 router.get("/my-election", async (req, res) => {

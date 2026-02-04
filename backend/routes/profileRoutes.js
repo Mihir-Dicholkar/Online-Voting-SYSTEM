@@ -1,6 +1,6 @@
 import express from "express";
 import UserProfile from "../models/UserProfile.js";
-import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
+import { ClerkExpressRequireAuth } from "@clerk/express";
 
 const router = express.Router();
 

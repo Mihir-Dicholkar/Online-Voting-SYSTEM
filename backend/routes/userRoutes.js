@@ -2,6 +2,7 @@
 import express from "express";
 import User from "../models/User.js";
 import { getAuth } from "@clerk/express";
+import { requireAuth } from "../middleware/clerkAuth.js";
 
 const router = express.Router();
 
@@ -11,7 +12,8 @@ router.post("/sync", async (req, res) => {
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const clerkUser = req.auth; // This contains everything from Clerk
+   const clerkUser = req.auth();
+ // This contains everything from Clerk
 
     // SAFELY extract email (Clerk sometimes hides it in emailAddresses)
     const primaryEmail = clerkUser.emailAddresses?.find(
@@ -107,11 +109,13 @@ router.get("/", async (req, res) => {
 });
 
 // routes/userRoutes.js
-router.post("/complete-profile", async (req, res) => {
+router.post("/complete-profile", requireAuth, async (req, res) => {
   try {
-    const auth = req.auth();
-    const clerkId = auth?.userId;
-    if (!clerkId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.auth.userId; // ✅ NOT req.user.id
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const {
       fullName,
@@ -125,57 +129,51 @@ router.post("/complete-profile", async (req, res) => {
       city,
     } = req.body;
 
-    // Validate all fields
+    // ✅ STRICT VALIDATION
     if (
-      !fullName ||
-      !email ||
-      !phone ||
-      !dateOfBirth ||
-      !voterId ||
-      !aadharCard ||
-      !district ||
-      !taluka ||
-      !city
+      !fullName || !email || !phone || !dateOfBirth ||
+      !voterId || !aadharCard ||
+      !district || !taluka || !city
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if already completed
-    const existing = await User.findOne({ clerkId });
-    if (existing?.profileCompleted) {
-      return res.status(400).json({ message: "Profile already completed" });
+    if (!/^\d{12}$/.test(aadharCard)) {
+      return res.status(400).json({ message: "Invalid Aadhar number" });
     }
 
-    // Create or update user
-    const user = await User.findOneAndUpdate(
-      { clerkId },
-      {
-        $set: {
-          fullName,
-          email,
-          phone,
-          dateOfBirth: new Date(dateOfBirth),
-          voterId,
-          aadharCard,
-          district,
-          taluka,
-          city,
-          profileCompleted: true,
-          hasVoted: false,
-        },
-      },
-      { upsert: true, new: true }
-    );
+    const user = await User.findOne({ clerkUserId: userId });
 
-    res.json({ success: true, user });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.profileCompleted) {
+      return res.status(403).json({ message: "Profile already completed" });
+    }
+
+    Object.assign(user, {
+      fullName,
+      email,
+      phone,
+      dateOfBirth,
+      voterId,
+      aadharCard,
+      district,
+      taluka,
+      city,
+      profileCompleted: true,
+    });
+
+    await user.save();
+
+    res.status(200).json({ message: "Profile completed successfully" });
+
   } catch (err) {
-    console.error("Profile completion error:", err.message);
-    if (err.code === 11000) {
-      return res
-        .status(400)
-        .json({ message: "Voter ID or Aadhar already registered" });
-    }
+    console.error("Complete profile error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
 export default router;

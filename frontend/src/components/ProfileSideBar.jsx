@@ -152,14 +152,24 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
     setErrors({});
   };
 
-  const handleSaveAll = async (e) => {
-    e.preventDefault();
-    if (!validateStep()) return;
+const handleSaveAll = async (e) => {
+  e.preventDefault();
 
-    setLoading(true);
-    try {
-      const token = await getToken();
-      await axios.post("http://localhost:5000/api/users/complete-profile", {
+  // 🔒 FRONTEND LOCK
+  if (isProfileCompleted) {
+    toast.error("Profile is already completed and cannot be edited");
+    return;
+  }
+
+  if (!validateStep()) return;
+
+  setLoading(true);
+  try {
+    const token = await getToken();
+
+    await axios.post(
+      "http://localhost:5000/api/users/complete-profile",
+      {
         fullName: personalDetails.fullName,
         email: personalDetails.email,
         phone: personalDetails.phone,
@@ -169,23 +179,31 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
         district: locationDetails.district,
         taluka: locationDetails.taluka,
         city: locationDetails.city,
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      toast.success("Profile completed! Welcome to voting");
-      toggleProfileSidebar(); // Close sidebar
-      window.location.reload(); // Refresh to update UI
-    } catch (err) {
-      const msg = err.response?.data?.message || "Failed to save profile";
-      toast.error(msg);
-      if (msg.includes("already registered")) {
-        setErrors({ voterId: "This Voter ID is already taken", aadharCard: "Aadhar already used" });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success("Profile completed successfully!");
+    toggleProfileSidebar();
+    window.location.reload();
+
+  } catch (err) {
+    const status = err.response?.status;
+    const msg = err.response?.data?.message;
+
+if (status === 403) {
+  toast.error("Profile already completed and locked");
+  setIsProfileCompleted(true);
+  return;
+}
+
+
+    toast.error(msg || "Failed to save profile");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const renderFormStep = () => {
     switch (step) {
@@ -339,15 +357,20 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
                   Next <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
                 </button>
               ) : (
-                <button
-                  onClick={handleSaveAll}
-                  disabled={loading}
-                  className="ml-auto px-4 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-700 hover:to-emerald-700 transition flex items-center gap-3 shadow-lg"
-                >
+         <button
+  onClick={handleSaveAll}
+  disabled={loading || isProfileCompleted}
+  className={`ml-auto px-4 py-4 font-bold text-lg rounded-xl transition flex items-center gap-3 shadow-lg
+    ${isProfileCompleted
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+    }`}
+>
+
                   {loading ? (
                     <>Saving... <FontAwesomeIcon icon={faSpinner} spin /></>
                   ) : (
-                    <>Complete Profile <FontAwesomeIcon icon={faCheckCircle} /></>
+                    <> {isProfileCompleted ? "Profile Locked" : "Complete Profile"} <FontAwesomeIcon icon={faCheckCircle} /></>
                   )}
                 </button>
               )}

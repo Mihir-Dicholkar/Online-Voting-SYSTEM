@@ -39,7 +39,7 @@ import {
 const COLORS = ["#2563eb", "#16a34a", "#f59e0b"];
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
 });
 
 export default function Dashboard() {
@@ -48,7 +48,7 @@ export default function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await api.get("/dashboard/overview");
+      const res = await api.get("/api/dashboard/overview");
       setData(res.data);
     } catch (err) {
       console.error("Dashboard load failed", err);
