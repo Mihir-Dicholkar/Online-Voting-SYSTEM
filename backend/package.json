@@ -12,7 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@clerk/backend": "^2.23.2",
     "@clerk/express": "^1.7.67",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",

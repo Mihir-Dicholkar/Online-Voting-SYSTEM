@@ -66,7 +66,7 @@ export default function SetElections() {
   const [editCandidate, setEditCandidate] = useState(null);
 
   const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL,
   });
 
   api.interceptors.request.use(async (config) => {
@@ -79,7 +79,7 @@ export default function SetElections() {
   const fetchElections = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/elections");
+      const res = await api.get("/api/elections");
       setElections(res.data);
     } catch {
       toast.error("Failed to load elections");
@@ -97,7 +97,7 @@ export default function SetElections() {
     e.preventDefault();
     try {
       setLoading(true);
-      await api.post("/elections", electionForm);
+      await api.post("/api/elections", electionForm);
       toast.success("Election created");
       setElectionForm({ title: "", region: "", startDate: "", endDate: "" });
       fetchElections();
@@ -112,7 +112,7 @@ export default function SetElections() {
   const activateElection = async (id) => {
     try {
       setLoading(true);
-      await api.put(`/elections/${id}/activate`);
+      await api.put(`/api/elections/${id}/activate`);
       toast.success("Election activated");
       fetchElections();
     } catch {
@@ -127,7 +127,7 @@ export default function SetElections() {
     if (!confirm("Delete election permanently?")) return;
     try {
       setLoading(true);
-      await api.delete(`/elections/${id}`);
+      await api.delete(`/api/elections/${id}`);
       toast.success("Election deleted");
       fetchElections();
     } catch {
@@ -154,7 +154,7 @@ const addCandidate = async (e) => {
   try {
     setLoading(true);
     await api.post(
-      `/elections/${candidateForm.electionId}/candidates`,
+      `/api/elections/${candidateForm.electionId}/candidates`,
       {
         name: candidateForm.name,
         party: candidateForm.party,

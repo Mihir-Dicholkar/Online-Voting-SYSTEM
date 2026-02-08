@@ -1,8 +1,9 @@
 // routes/userRoutes.js
 import express from "express";
 import User from "../models/User.js";
-import { getAuth } from "@clerk/express";
-import { requireAuth } from "../middleware/clerkAuth.js";
+import { getAuth, requireAuth } from "@clerk/express";
+import { clerkClient } from "@clerk/express";
+
 
 const router = express.Router();
 
@@ -12,8 +13,9 @@ router.post("/sync", async (req, res) => {
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-   const clerkUser = req.auth();
- // This contains everything from Clerk
+    const clerkUser = req.auth;
+
+    // This contains everything from Clerk
 
     // SAFELY extract email (Clerk sometimes hides it in emailAddresses)
     const primaryEmail = clerkUser.emailAddresses?.find(
@@ -74,52 +76,57 @@ router.post("/sync", async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-// Optional: Get current logged-in user (useful for frontend)
-router.get("/me", async (req, res) => {
-  try {
-    const { userId } = getAuth(req);
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-    const user = await User.findOne({ clerkId: userId });
-    if (!user)
-      return res.status(404).json({ message: "User not found – sync first" });
-
-    res.json({ success: true, user });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 // Keep your admin-only /users list if needed
-router.get("/", async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
-    const { userId } = getAuth(req);
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    const currentUser = await User.findOne({ clerkId: userId });
-    if (currentUser?.role !== "admin") {
-      return res.status(403).json({ error: "Admins only" });
-    }
-
-    const users = await User.find().select("-__v");
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// routes/userRoutes.js
-router.post("/complete-profile", requireAuth, async (req, res) => {
-  try {
-    const userId = req.auth.userId; // ✅ NOT req.user.id
+    const { userId } = req.auth();
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    let user = await User.findOne({ clerkId: userId });
+
+    if (!user) {
+      const clerkUser = await clerkClient.users.getUser(userId);
+
+     const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+if (!email) {
+  return res.status(400).json({
+    message: "No email found in Clerk account",
+  });
+}
+
+      user = await User.create({
+        clerkId: userId,
+        email,
+        role: "voter",
+        profileCompleted: false,
+      });
+    }
+
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error("❌ /me failed:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// routes/userRoutes.js
+router.post("/complete-profile",  async (req, res) => {
+  try {
+    const { userId } = req.auth();
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    
+
     const {
       fullName,
-      email,
       phone,
       dateOfBirth,
       voterId,
@@ -129,20 +136,15 @@ router.post("/complete-profile", requireAuth, async (req, res) => {
       city,
     } = req.body;
 
-    // ✅ STRICT VALIDATION
     if (
-      !fullName || !email || !phone || !dateOfBirth ||
+      !fullName || !phone || !dateOfBirth ||
       !voterId || !aadharCard ||
       !district || !taluka || !city
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    if (!/^\d{12}$/.test(aadharCard)) {
-      return res.status(400).json({ message: "Invalid Aadhar number" });
-    }
-
-    const user = await User.findOne({ clerkUserId: userId });
+    const user = await User.findOne({ clerkId: userId });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -152,28 +154,44 @@ router.post("/complete-profile", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Profile already completed" });
     }
 
-    Object.assign(user, {
-      fullName,
-      email,
-      phone,
-      dateOfBirth,
-      voterId,
-      aadharCard,
-      district,
-      taluka,
-      city,
-      profileCompleted: true,
+  if (!user.email) {
+  const clerkUser = await clerkClient.users.getUser(userId);
+  const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+  if (!email) {
+    return res.status(400).json({
+      message: "Email missing. Please login again.",
+    });
+  }
+
+  user.email = email;
+}
+
+Object.assign(user, {
+  fullName,
+  phone,
+  dateOfBirth,
+  voterId,
+  aadharCard,
+  district,
+  taluka,
+  city,
+  profileCompleted: true,
+});
+
+await user.save();
+
+
+    return res.status(200).json({
+      message: "Profile completed successfully",
     });
 
-    await user.save();
-
-    res.status(200).json({ message: "Profile completed successfully" });
-
   } catch (err) {
-    console.error("Complete profile error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Complete profile error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
+
 
 
 export default router;

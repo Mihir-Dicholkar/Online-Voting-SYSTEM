@@ -48,7 +48,7 @@ function Voting() {
 
   const api = useMemo(() => {
     const instance = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+      baseURL: import.meta.env.VITE_API_URL
     });
 
     // Automatically add Clerk JWT to every request

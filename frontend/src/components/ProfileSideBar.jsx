@@ -1,10 +1,12 @@
 // src/components/ProfileSidebar.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTimes,
   faUserCircle,
+  faCircleCheck,
   faCheckCircle,
+  faLock,
   faExclamationCircle,
   faArrowRight,
   faArrowLeft,
@@ -15,7 +17,7 @@ import {
 import { useAuth, useUser } from "@clerk/clerk-react";
 import axios from "axios";
 import { toast } from "react-toastify";
-
+const API_BASE = import.meta.env.VITE_API_URL;
 const districtsMaharashtra = [
   "Mumbai City", "Mumbai Suburban", "Thane", "Palghar", "Raigad", "Ratnagiri", "Sindhudurg",
   "Pune", "Satara", "Sangli", "Kolhapur", "Solapur", "Ahmednagar", "Nashik", "Dhule", "Jalgaon", "Nandurbar",
@@ -57,40 +59,60 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
 
       try {
         const token = await getToken();
-        const res = await axios.get("http://localhost:5000/api/users/me", {
-          headers: { Authorization: `Bearer ${token}` }
+
+        console.log("🟡 Clerk token exists:", !!token);
+
+        const res = await axios.get(`${API_BASE}/api/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        if (res.data.profileCompleted) {
+        // 🔥 MOST IMPORTANT LOG
+        console.log("🟢 /me response data:", res.data);
+
+        const u = res.data?.user;
+
+        console.log("🧩 user object:", u);
+        console.log("📌 profileCompleted:", u?.profileCompleted);
+
+        if (u?.profileCompleted) {
           setIsProfileCompleted(true);
-          // Prefill data for display
-          const u = res.data;
+
           setPersonalDetails({
-            fullName: u.fullName || '',
-            email: u.email || '',
-            phone: u.phone || '',
-            dateOfBirth: u.dateOfBirth ? u.dateOfBirth.split('T')[0] : '',
+            fullName: u.fullName || "",
+            email: u.email || "",
+            phone: u.phone || "",
+            dateOfBirth: u.dateOfBirth
+              ? u.dateOfBirth.split("T")[0]
+              : "",
           });
+
           setVerificationDetails({
-            voterId: u.voterId || '',
-            aadharCard: u.aadharCard ? `XXXX XXXX ${u.aadharCard.slice(-4)}` : '',
+            voterId: u.voterId || "",
+            aadharCard: u.aadharCard
+              ? `XXXX XXXX ${u.aadharCard.slice(-4)}`
+              : "",
           });
+
           setLocationDetails({
-            district: u.district || '',
-            taluka: u.taluka || '',
-            city: u.city || '',
+            district: u.district || "",
+            taluka: u.taluka || "",
+            city: u.city || "",
           });
         } else {
+          console.log("⚠️ Profile NOT completed");
           setIsProfileCompleted(false);
         }
       } catch (err) {
-        console.error("Failed to check profile:", err);
+        console.error("❌ Failed to check profile:", err);
         setIsProfileCompleted(false);
       }
     };
 
     checkProfileStatus();
   }, [user, isProfileSidebarOpen, getToken]);
+
 
   const handlePersonalChange = (e) => {
     const { name, value } = e.target;
@@ -110,14 +132,19 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  const getMaxDOBForVoting = () => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() - 18);
+    return today.toISOString().split("T")[0];
+  };
+
+
   const validateStep = () => {
     let newErrors = {};
 
     if (step === 1) {
       if (!personalDetails.fullName.trim()) newErrors.fullName = 'Full Name is required';
-      if (!personalDetails.email.trim()) newErrors.email = 'Email is required';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalDetails.email))
-        newErrors.email = 'Invalid email';
+
       if (!personalDetails.phone.trim()) newErrors.phone = 'Phone is required';
       else if (!/^\d{10}$/.test(personalDetails.phone))
         newErrors.phone = 'Must be 10 digits';
@@ -152,57 +179,73 @@ const ProfileSidebar = ({ isProfileSidebarOpen, toggleProfileSidebar }) => {
     setErrors({});
   };
 
-const handleSaveAll = async (e) => {
-  e.preventDefault();
+      const handleSaveAll = useCallback(
+        async (e) => {
+          e.preventDefault();
 
-  // 🔒 FRONTEND LOCK
-  if (isProfileCompleted) {
-    toast.error("Profile is already completed and cannot be edited");
-    return;
-  }
+          // 🔒 FRONTEND LOCK
+          if (isProfileCompleted) {
+            toast.error("Profile is already completed and cannot be edited");
+            return;
+          }
 
-  if (!validateStep()) return;
+          if (!validateStep()) return;
 
-  setLoading(true);
-  try {
-    const token = await getToken();
+          setLoading(true);
 
-    await axios.post(
-      "http://localhost:5000/api/users/complete-profile",
-      {
-        fullName: personalDetails.fullName,
-        email: personalDetails.email,
-        phone: personalDetails.phone,
-        dateOfBirth: personalDetails.dateOfBirth,
-        voterId: verificationDetails.voterId,
-        aadharCard: verificationDetails.aadharCard.replace(/\s/g, ''),
-        district: locationDetails.district,
-        taluka: locationDetails.taluka,
-        city: locationDetails.city,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+          try {
+            const token = await getToken();
 
-    toast.success("Profile completed successfully!");
-    toggleProfileSidebar();
-    window.location.reload();
+            await axios.post(
+              `${API_BASE}/api/users/complete-profile`,
+              {
+                fullName: personalDetails.fullName,
+                email: personalDetails.email,
+                phone: personalDetails.phone,
+                dateOfBirth: personalDetails.dateOfBirth,
+                voterId: verificationDetails.voterId,
+                aadharCard: verificationDetails.aadharCard.replace(/\s/g, ""),
+                district: locationDetails.district,
+                taluka: locationDetails.taluka,
+                city: locationDetails.city,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
 
-  } catch (err) {
-    const status = err.response?.status;
-    const msg = err.response?.data?.message;
+            toast.success("Profile completed successfully!");
+            setIsProfileCompleted(true);
+            toggleProfileSidebar();
+        
+          } catch (err) {
+            const status = err.response?.status;
+            const msg = err.response?.data?.message;
 
-if (status === 403) {
-  toast.error("Profile already completed and locked");
-  setIsProfileCompleted(true);
-  return;
-}
+            if (status === 403) {
+              toast.error("Profile already completed and locked");
+              setIsProfileCompleted(true);
+              return;
+            }
 
+            toast.error(msg || "Failed to save profile");
+          } finally {
+            setLoading(false);
+          }
+        },
+        [
+          isProfileCompleted,
+          personalDetails,
+          verificationDetails,
+          locationDetails,
+          validateStep,
+          getToken,
+          toggleProfileSidebar,
+        ]
+      );
 
-    toast.error(msg || "Failed to save profile");
-  } finally {
-    setLoading(false);
-  }
-};
 
 
   const renderFormStep = () => {
@@ -217,16 +260,36 @@ if (status === 403) {
               className={`w-full px-4 py-3 rounded-xl border ${errors.fullName ? 'border-red-500' : 'border-gray-300'} focus:ring-4 focus:ring-blue-100`} />
             {errors.fullName && <p className="text-red-500 text-sm">{errors.fullName}</p>}
 
-            <input type="email" name="email" placeholder="Email Address" value={personalDetails.email} onChange={handlePersonalChange}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={personalDetails.email}
+              disabled
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-100 cursor-not-allowed text-gray-600"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Email is linked to your account and cannot be changed
+            </p>
+
 
             <input type="tel" name="phone" placeholder="Phone (10 digits)" value={personalDetails.phone} onChange={handlePersonalChange}
               className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? 'border-red-500' : 'border-gray-300'}`} />
             {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
 
-            <input type="date" name="dateOfBirth" value={personalDetails.dateOfBirth} onChange={handlePersonalChange}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300" />
+            <input
+              type="date"
+              name="dateOfBirth"
+              value={personalDetails.dateOfBirth}
+              onChange={handlePersonalChange}
+              max={getMaxDOBForVoting()}
+              className={`w-full px-4 py-3 rounded-xl border ${errors.dateOfBirth ? "border-red-500" : "border-gray-300"
+                }`}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              You must be at least 18 years old to vote
+            </p>
+
           </div>
         );
 
@@ -274,7 +337,7 @@ if (status === 403) {
 
 
   };
-   if (isProfileCompleted === null) {
+  if (isProfileCompleted === null) {
     return (
       <div className={`fixed inset-0 bg-black/50 z-50 flex justify-end ${isProfileSidebarOpen ? 'visible' : 'invisible'}`}>
         <div className="w-full max-w-md bg-white h-screen flex items-center justify-center">
@@ -357,15 +420,15 @@ if (status === 403) {
                   Next <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
                 </button>
               ) : (
-         <button
-  onClick={handleSaveAll}
-  disabled={loading || isProfileCompleted}
-  className={`ml-auto px-4 py-4 font-bold text-lg rounded-xl transition flex items-center gap-3 shadow-lg
-    ${isProfileCompleted
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-    }`}
->
+                <button
+                  onClick={handleSaveAll}
+                  disabled={loading || isProfileCompleted}
+                  className={`ml-auto px-4 py-4 font-bold text-lg rounded-xl transition flex items-center gap-3 shadow-lg
+      ${isProfileCompleted
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                    }`}
+                >
 
                   {loading ? (
                     <>Saving... <FontAwesomeIcon icon={faSpinner} spin /></>

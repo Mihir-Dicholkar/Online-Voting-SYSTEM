@@ -1,104 +1,63 @@
-// backend/controllers/dashboardController.js
 import Election from "../models/Election.js";
+import Vote from "../models/Vote.js";
+import User from "../models/User.js";
 
 export const getDashboardOverview = async (req, res) => {
   try {
     const now = new Date();
 
-    /* ---------------------------------- */
-    /* Elections Status Counts             */
-    /* ---------------------------------- */
-
-    const activeElections = await Election.countDocuments({
-      status: "active",
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-    });
-
-    const completedElections = await Election.countDocuments({
+    /* ---------------- Completed Elections ---------------- */
+    const completedElections = await Election.find({
       endDate: { $lt: now },
     });
 
-    /* ---------------------------------- */
-    /* Total Voters (sum of votes)         */
-    /* ---------------------------------- */
+    const completedElectionCount = completedElections.length;
 
-    const elections = await Election.find();
+    /* ---------------- Voters ---------------- */
+    const voters = await User.find({ role: "voter" }).select(
+      "name email clerkId createdAt"
+    );
 
-    let totalVoters = 0;
+    /* ---------------- Votes ---------------- */
+    const votes = await Vote.find().populate(
+      "electionId",
+      "title region"
+    );
+
+    /* ---------------- Vote Share ---------------- */
     const voteShareMap = {};
-
-    elections.forEach((e) => {
-      e.candidates.forEach((c) => {
-        totalVoters += c.votes || 0;
-
-        if (!voteShareMap[c.party]) {
-          voteShareMap[c.party] = 0;
-        }
-        voteShareMap[c.party] += c.votes || 0;
-      });
+    votes.forEach((v) => {
+      voteShareMap[v.party] = (voteShareMap[v.party] || 0) + 1;
     });
 
     const voteShare = Object.entries(voteShareMap).map(
-      ([name, value]) => ({
-        name,
-        value,
-      })
+      ([name, value]) => ({ name, value })
     );
 
-    /* ---------------------------------- */
-    /* Turnout by Region (Line Chart)      */
-    /* ---------------------------------- */
-
-    const turnoutByRegion = elections.map((e) => {
-      const totalVotes = e.candidates.reduce(
-        (sum, c) => sum + (c.votes || 0),
-        0
+    /* ---------------- Turnout by Region ---------------- */
+    const turnoutByRegion = completedElections.map((e) => {
+      const regionVotes = votes.filter(
+        (v) => String(v.electionId._id) === String(e._id)
       );
 
       return {
         name: e.region,
-        turnout: totalVotes > 0
-          ? Math.min(90, Math.floor((totalVotes / 100000) * 100))
-          : 0,
-      };
-    });
-
-    /* ---------------------------------- */
-    /* Region Overview Cards               */
-    /* ---------------------------------- */
-
-    const regions = elections.map((e) => {
-      const winnerCandidate = e.candidates.reduce(
-        (max, c) => (c.votes > (max?.votes || 0) ? c : max),
-        null
-      );
-
-      return {
-        _id: e._id,
-        name: e.region,
-        description: `${e.title} constituency election`,
-        turnout: e.candidates.reduce((s, c) => s + (c.votes || 0), 0) > 0
-          ? Math.floor(Math.random() * 20 + 55)
-          : 0,
-        winner: winnerCandidate
-          ? winnerCandidate.party
-          : "TBD",
+        turnout: Math.min(
+          100,
+          Math.floor((regionVotes.length / e.totalVoters) * 100)
+        ),
       };
     });
 
     res.json({
-      activeElections,
-      completedElections,
-      totalVoters,
-      turnoutByRegion,
+      completedElections: completedElectionCount,
+      voters,
+      votes,
       voteShare,
-      regions,
+      turnoutByRegion,
     });
   } catch (err) {
-    console.error("Dashboard Error:", err);
-    res.status(500).json({
-      message: "Failed to load dashboard data",
-    });
+    console.error(err);
+    res.status(500).json({ message: "Dashboard failed" });
   }
 };
