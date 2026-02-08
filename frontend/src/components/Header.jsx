@@ -39,7 +39,7 @@ const Header = () => {
           <Link to="/" className={navLinkClasses}>
             Home <span className={underlineClasses}></span>
           </Link>
-        
+
           <Link to="/voting" className={navLinkClasses}>
             Elections <span className={underlineClasses}></span>
           </Link>
@@ -59,29 +59,29 @@ const Header = () => {
             <FontAwesomeIcon icon={faUserCircle} size="2x" className="transform hover:scale-110 transition duration-300 ease-in-out" />
           </button>
 
-           <SignedIn>
-    <UserButton 
-      afterSignOutUrl="/" 
-      appearance={{
-        elements: {
-          avatarBox: "h-9 w-9 md:h-10 md:w-10",
-        },
-      }}
-    />
-  </SignedIn>
+          <SignedIn>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox: "h-9 w-9 md:h-10 md:w-10",
+                },
+              }}
+            />
+          </SignedIn>
 
-  {/* 🔐 Show this when signed out */}
-  <SignedOut>
-    <SignInButton mode="modal">
-      <button className="text-white hover:text-blue-200 hidden md:block">
-        <FontAwesomeIcon
-          icon={faSignInAlt}
-          size="2x"
-          className="transform hover:scale-110 transition duration-300 ease-in-out"
-        />
-      </button>
-    </SignInButton>
-  </SignedOut>
+          {/* 🔐 Show this when signed out */}
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="text-white hover:text-blue-200 hidden md:block">
+                <FontAwesomeIcon
+                  icon={faSignInAlt}
+                  size="2x"
+                  className="transform hover:scale-110 transition duration-300 ease-in-out"
+                />
+              </button>
+            </SignInButton>
+          </SignedOut>
 
           {/* Mobile Menu Button */}
           <button
@@ -98,19 +98,28 @@ const Header = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-blue-700 py-2 mt-2 rounded-lg shadow-md">
           <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="block text-white px-4 py-2 hover:bg-blue-600 rounded-md">Home</Link>
-          
+
           <Link to="/voting" onClick={() => setIsMobileMenuOpen(false)} className="block text-white px-4 py-2 hover:bg-blue-600 rounded-md">Elections</Link>
           <Link to="/results" onClick={() => setIsMobileMenuOpen(false)} className="block text-white px-4 py-2 hover:bg-blue-600 rounded-md">Results</Link>
-          <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-white px-4 py-2 hover:bg-blue-600 rounded-md">
-            <FontAwesomeIcon icon={faSignInAlt} className="mr-2" /> Login
-          </Link>
+       
+          <button
+            onClick={() => {
+              toggleProfileSidebar();
+              setIsMobileMenuOpen(false);
+            }}
+            className="w-full text-left text-white px-4 py-2 hover:bg-blue-600 rounded-md flex items-center gap-2"
+          >
+            <FontAwesomeIcon icon={faUserCircle} />
+            Profile
+          </button>
+
         </div>
       )}
 
       {/* ✅ Use the ProfileSidebar component */}
-      <ProfileSidebar 
-        isProfileSidebarOpen={isProfileSidebarOpen} 
-        toggleProfileSidebar={toggleProfileSidebar} 
+      <ProfileSidebar
+        isProfileSidebarOpen={isProfileSidebarOpen}
+        toggleProfileSidebar={toggleProfileSidebar}
       />
     </nav>
   );
